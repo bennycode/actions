@@ -1,0 +1,25 @@
+name: Coverage
+
+on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        description: 'Coverage Upload Token: https://docs.codecov.com/docs/codecov-uploader#upload-token'
+        required: false
+
+jobs:
+  coverage:
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Upload code coverage'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          files: ./coverage/lcov.info
+          flags: unittests
+          verbose: false
+        if: |
+          contains(github.event.commits[0].message, '[skip ci]') == false &&
+          contains(github.event.commits[0].message, '[ci skip]') == false

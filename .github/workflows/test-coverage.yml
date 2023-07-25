@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        description: 'Coverage Upload Token: https://docs.codecov.com/docs/codecov-uploader#upload-token'
+        required: false
+jobs:
+  test-coverage:
+    if: |
+      contains(github.event.commits[0].message, '[skip ci]') == false &&
+      contains(github.event.commits[0].message, '[ci skip]') == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: |
+          npm ci
+          npm test
+      - name: 'Upload code coverage'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          files: ./coverage/lcov.info
+          flags: unittests
+          verbose: false
+        if: ${{ github.actor != 'dependabot[bot]' }}

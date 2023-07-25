@@ -1,0 +1,19 @@
+name: Test
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    if: |
+      contains(github.event.commits[0].message, '[skip ci]') == false &&
+      contains(github.event.commits[0].message, '[ci skip]') == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: |
+          npm ci
+          npm test

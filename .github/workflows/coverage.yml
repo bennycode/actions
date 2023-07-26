@@ -19,7 +19,6 @@ jobs:
           flags: unittests
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: false
-          yml: ./codecov.yml
         if: |
           contains(github.event.commits[0].message, '[skip ci]') == false &&
           contains(github.event.commits[0].message, '[ci skip]') == false

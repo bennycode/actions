@@ -23,9 +23,10 @@ jobs:
       - name: 'Upload code coverage from "main" branch'
         uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
           files: ./coverage/lcov.info
           flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
           verbose: false
+          yml: ./codecov.yml
         if: ${{ github.actor != 'dependabot[bot]' && github.ref == 'refs/heads/main' }}

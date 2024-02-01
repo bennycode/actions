@@ -22,7 +22,7 @@ jobs:
           npm ci
           npm test
       - name: 'Upload code coverage from "main" branch'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: false
           files: ./coverage/lcov.info

@@ -12,6 +12,6 @@ concurrency:
 
 jobs:
   self-test-job:
-    uses: .github/workflows/test-coverage.yml@main
+    uses: './test-coverage.yml'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

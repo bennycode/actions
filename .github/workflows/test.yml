@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  test:
+  test-job:
     if: |
       contains(github.event.commits[0].message, '[skip ci]') == false &&
       contains(github.event.commits[0].message, '[ci skip]') == false

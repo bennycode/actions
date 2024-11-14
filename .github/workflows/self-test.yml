@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   self-test-job:
-    uses: './test-coverage.yml'
+    # @see https://github.blog/changelog/2022-01-25-github-actions-reusable-workflows-can-be-referenced-locally/
+    uses: './.github/workflows/test-coverage.yml'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

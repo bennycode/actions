@@ -22,7 +22,7 @@ jobs:
           yarn install --frozen-lockfile
           yarn test
       - name: 'Upload code coverage from "main" branch'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: false
           files: ./coverage/lcov.info

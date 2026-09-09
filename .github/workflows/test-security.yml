@@ -85,14 +85,18 @@ jobs:
           PACKAGE: ${{ inputs.package }}
         run: |
           if [ -n "$PACKAGE" ]; then
+            # Extract outside the git tree so Semgrep doesn't skip untracked files,
+            # and disable its default ignores so shipped dist/ code is scanned.
+            DIR="$RUNNER_TEMP/semgrep-target"
+            rm -rf "$DIR" && mkdir -p "$DIR"
             npm pack "$PACKAGE_SPEC"
-            mkdir -p unpacked
-            tar -xzf ./*.tgz -C unpacked --strip-components=1
-            TARGET=unpacked
+            tar -xzf ./*.tgz -C "$DIR" --strip-components=1
+            : > "$DIR/.semgrepignore"
+            OUT="$PWD/security.semgrep.sarif"
+            (cd "$DIR" && uvx semgrep scan --config auto --sarif --output "$OUT" .)
           else
-            TARGET=.
+            uvx semgrep scan --config auto --sarif --output security.semgrep.sarif .
           fi
-          uvx semgrep scan --config auto --sarif --output security.semgrep.sarif "$TARGET"
 
       - name: Upload Semgrep SARIF file to GitHub
         uses: github/codeql-action/upload-sarif@v4.38.0

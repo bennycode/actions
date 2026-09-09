@@ -1,12 +1,16 @@
 {
   "description": "Reusable workflows for GitHub Actions",
   "devDependencies": {
-    "lefthook": "^1.8.2",
-    "prettier": "^2.8.8",
-    "pretty-quick": "^3.3.1"
+    "lefthook": "^2.1.12",
+    "prettier": "^3.9.6",
+    "pretty-quick": "^4.2.2"
   },
   "name": "actions",
   "scripts": {
+    "act": "act push",
+    "act:list": "act -l",
+    "act:self-test": "act workflow_dispatch -W .github/workflows/self-test.yml",
+    "format": "prettier --write .",
     "test": "node --test"
   },
   "type": "module",

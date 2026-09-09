@@ -1,0 +1,103 @@
+name: 'GuardDog'
+
+# Supply-chain scan with GuardDog (https://github.com/DataDog/guarddog):
+#   1. "verify" checks the declared dependencies for known malicious packages.
+#   2. "scan" checks the repository's own source for malicious behaviour.
+# Both report to the "Security" tab under their own category.
+#
+# GuardDog looks for malicious behaviour (exfiltration, obfuscation, install
+# hooks), not for vulnerabilities. It complements CodeQL, it does not replace it.
+
+on:
+  workflow_call:
+    inputs:
+      ecosystem:
+        description: 'Package ecosystem to scan: npm, pypi, go, github-action, rubygems or vscode-extension'
+        required: false
+        type: string
+        default: 'npm'
+      dependency-file:
+        description: 'Dependency file to verify, e.g. "package.json" for npm or "requirements.txt" for pypi'
+        required: false
+        type: string
+        default: 'package.json'
+      scan-source:
+        description: "Also scan this repository's own source code, not just its dependencies."
+        required: false
+        type: boolean
+        default: true
+      exclude-rules:
+        description: 'Rules to skip, separated by spaces. Rules differ per ecosystem, see "guarddog <ecosystem> list-rules".'
+        required: false
+        type: string
+        default: ''
+      toolkit-ref:
+        description: 'Ref of bennycode/actions to take the SARIF converter from.'
+        required: false
+        type: string
+        default: 'main'
+
+jobs:
+  guarddog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10
+
+      - name: 'Scan dependencies'
+        # Inputs are passed as environment variables so that a calling workflow
+        # cannot inject shell commands into this step.
+        env:
+          ECOSYSTEM: ${{ inputs.ecosystem }}
+          DEPENDENCY_FILE: ${{ inputs.dependency-file }}
+          EXCLUDE_RULES: ${{ inputs.exclude-rules }}
+        # GuardDog exits 0 on findings, so results get reported instead of
+        # breaking the build.
+        run: |
+          exclude=()
+          for rule in $EXCLUDE_RULES; do exclude+=(--exclude-rules "$rule"); done
+          uvx guarddog "$ECOSYSTEM" verify "$DEPENDENCY_FILE" \
+            --output-format sarif "${exclude[@]}" > guarddog-dependencies.sarif
+      - name: 'Upload dependency findings'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          category: 'guarddog-dependencies'
+          sarif_file: 'guarddog-dependencies.sarif'
+
+      # Runs before the converter is checked out, so that the scan sees only the
+      # calling repository. The report is staged outside the workspace for the
+      # same reason.
+      - name: 'Scan source code'
+        if: ${{ inputs.scan-source }}
+        env:
+          ECOSYSTEM: ${{ inputs.ecosystem }}
+          EXCLUDE_RULES: ${{ inputs.exclude-rules }}
+        run: |
+          exclude=()
+          for rule in $EXCLUDE_RULES; do exclude+=(--exclude-rules "$rule"); done
+          uvx guarddog "$ECOSYSTEM" scan . \
+            --output-format json "${exclude[@]}" > "$RUNNER_TEMP/guarddog-source.json"
+      - name: 'Check out the SARIF converter'
+        if: ${{ inputs.scan-source }}
+        uses: actions/checkout@v7
+        with:
+          repository: 'bennycode/actions'
+          ref: ${{ inputs.toolkit-ref }}
+          path: '.guarddog-toolkit'
+          persist-credentials: false
+      - name: 'Write source SARIF'
+        if: ${{ inputs.scan-source }}
+        run: |
+          node .guarddog-toolkit/src/guarddog-sarif.js \
+            "$RUNNER_TEMP/guarddog-source.json" > guarddog-source.sarif
+      - name: 'Upload source findings'
+        if: ${{ inputs.scan-source }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          category: 'guarddog-source'
+          sarif_file: 'guarddog-source.sarif'

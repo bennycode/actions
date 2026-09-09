@@ -1,0 +1,42 @@
+name: 'Scorecard'
+
+# Rates this repository's own security posture: branch protection, token
+# permissions, pinned dependencies, dangerous workflow patterns and more.
+# https://github.com/ossf/scorecard
+#
+# Scorecard only supports the default branch, so callers should trigger it on
+# "push" to the default branch and/or on a "schedule", never on "pull_request".
+
+on:
+  workflow_call:
+    inputs:
+      publish-results:
+        description: 'Publish the score to the public OpenSSF API (https://api.scorecard.dev) to enable the README badge. Always disabled on private repositories.'
+        required: false
+        type: boolean
+        default: false
+
+permissions: read-all
+
+jobs:
+  scorecard:
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the results to the "Security" tab
+      security-events: write
+      # Needed for the OIDC token that proves the results are authentic
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: 'Run analysis'
+        uses: ossf/scorecard-action@v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: ${{ inputs.publish-results }}
+      - name: 'Upload results to GitHub'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif

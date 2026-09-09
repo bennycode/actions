@@ -14,3 +14,31 @@ jobs:
   self-test-job:
     # @see https://github.blog/changelog/2022-01-25-github-actions-reusable-workflows-can-be-referenced-locally/
     uses: './.github/workflows/test.yml'
+
+  self-test-security-job:
+    uses: './.github/workflows/security.yml'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+  self-test-guarddog-job:
+    uses: './.github/workflows/guarddog.yml'
+    permissions:
+      contents: read
+      security-events: write
+
+  # Scorecard supports the default branch only, so it is skipped on pull requests.
+  self-test-scorecard-job:
+    if: github.event_name == 'push'
+    uses: './.github/workflows/scorecard.yml'
+    permissions:
+      security-events: write
+      id-token: write
+
+  self-test-cve-job:
+    uses: './.github/workflows/cve.yml'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write

@@ -92,10 +92,22 @@ jobs:
             npm pack "$PACKAGE_SPEC"
             tar -xzf ./*.tgz -C "$DIR" --strip-components=1
             : > "$DIR/.semgrepignore"
-            OUT="$PWD/security.semgrep.sarif"
-            (cd "$DIR" && uvx semgrep scan --config auto --sarif --output "$OUT" .)
+            SARIF="$PWD/security.semgrep.sarif"
+            TXT="$PWD/security.semgrep.txt"
+            (cd "$DIR" && uvx semgrep scan --config auto --sarif-output "$SARIF" --text-output "$TXT" .)
           else
-            uvx semgrep scan --config auto --sarif --output security.semgrep.sarif .
+            uvx semgrep scan --config auto --sarif-output security.semgrep.sarif --text-output security.semgrep.txt .
+          fi
+
+      - name: Write Semgrep summary
+        if: always()
+        run: |
+          if [ -f security.semgrep.txt ]; then
+            {
+              echo '```'
+              cat security.semgrep.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload Semgrep SARIF file to GitHub

@@ -13,8 +13,8 @@ jobs:
       contains(github.event.commits[0].message, '[ci skip]') == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
         with:
           node-version: '20'
       - name: 'Run tests on clean install'
@@ -22,7 +22,7 @@ jobs:
           npm ci
           npm test
       - name: 'Upload code coverage from "main" branch'
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@v7.0.0
         with:
           fail_ci_if_error: false
           files: ./coverage/lcov.info

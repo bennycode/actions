@@ -1,0 +1,105 @@
+name: 'Test Security'
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: 'npm package to scan (e.g. express or express@4.18.2). Leave empty to verify the local package.json.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-security:
+    permissions:
+      contents: read
+      security-events: write
+    name: Dependency security checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: astral-sh/setup-uv@v10.0.1
+
+      - name: Run GuardDog
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            uvx guarddog npm scan "$PACKAGE" --output-format sarif > security.guarddog.sarif
+          else
+            uvx guarddog npm verify package.json --output-format sarif --exclude-rules repository_integrity_mismatch > security.guarddog.sarif
+          fi
+
+      - name: Upload SARIF file to GitHub
+        uses: github/codeql-action/upload-sarif@v4.38.0
+        with:
+          category: guarddog-builtin
+          sarif_file: security.guarddog.sarif
+
+  code-security:
+    permissions:
+      contents: read
+      security-events: write
+    name: Code security checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: astral-sh/setup-uv@v10.0.1
+
+      - name: Run Semgrep
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            npm pack "$PACKAGE"
+            mkdir -p unpacked
+            tar -xzf ./*.tgz -C unpacked --strip-components=1
+            TARGET=unpacked
+          else
+            TARGET=.
+          fi
+          uvx semgrep scan --config auto --sarif --output security.semgrep.sarif "$TARGET"
+
+      - name: Upload Semgrep SARIF file to GitHub
+        uses: github/codeql-action/upload-sarif@v4.38.0
+        with:
+          category: semgrep
+          sarif_file: security.semgrep.sarif
+
+  repository-security:
+    permissions:
+      contents: read
+      security-events: write
+    name: Repository security checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run OpenSSF Scorecard
+        env:
+          PACKAGE: ${{ inputs.package }}
+          GITHUB_AUTH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            TARGET=(--npm="$PACKAGE")
+          else
+            TARGET=(--repo="github.com/$GITHUB_REPOSITORY")
+          fi
+          docker run --rm -e GITHUB_AUTH_TOKEN \
+            gcr.io/openssf/scorecard:stable \
+            "${TARGET[@]}" --format=sarif > security.scorecard.sarif
+
+      - name: Upload Scorecard SARIF file to GitHub
+        uses: github/codeql-action/upload-sarif@v4.38.0
+        with:
+          category: scorecard
+          sarif_file: security.scorecard.sarif

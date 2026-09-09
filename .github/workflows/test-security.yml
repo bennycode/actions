@@ -4,12 +4,25 @@ on:
   workflow_call:
     inputs:
       package:
-        description: 'npm package to scan (e.g. express or express@4.18.2). Leave empty to verify the local package.json.'
+        description: 'npm package name to scan (e.g. express or @scope/pkg). Leave empty to verify the local package.json.'
         required: false
         type: string
+      version:
+        description: 'Optional package version to scan (e.g. 4.18.2).'
+        required: false
+        default: 'latest'
+        type: string
+      sandbox:
+        description: 'Run GuardDog inside its kernel-level sandbox. Set to false for local act runs where the sandbox is unavailable.'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
+
+env:
+  PACKAGE_SPEC: ${{ inputs.package }}@${{ inputs.version }}
 
 jobs:
   dependency-security:
@@ -27,14 +40,25 @@ jobs:
       - name: Run GuardDog
         env:
           PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+          SANDBOX: ${{ inputs.sandbox }}
         run: |
+          SANDBOX_FLAG=""
+          if [ "$SANDBOX" = "false" ]; then
+            SANDBOX_FLAG="--no-sandbox"
+          fi
           if [ -n "$PACKAGE" ]; then
-            uvx guarddog npm scan "$PACKAGE" --output-format sarif > security.guarddog.sarif
+            if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
+              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE" --version "$VERSION"
+            else
+              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE"
+            fi
           else
-            uvx guarddog npm verify package.json --output-format sarif > security.guarddog.sarif
+            uvx guarddog npm verify $SANDBOX_FLAG --output-format sarif package.json > security.guarddog.sarif
           fi
 
       - name: Upload SARIF file to GitHub
+        if: ${{ inputs.package == '' }}
         uses: github/codeql-action/upload-sarif@v4.38.0
         with:
           category: guarddog-builtin
@@ -50,6 +74,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
       - uses: astral-sh/setup-uv@v10.0.1
 
       - name: Run Semgrep
@@ -57,7 +85,7 @@ jobs:
           PACKAGE: ${{ inputs.package }}
         run: |
           if [ -n "$PACKAGE" ]; then
-            npm pack "$PACKAGE"
+            npm pack "$PACKAGE_SPEC"
             mkdir -p unpacked
             tar -xzf ./*.tgz -C unpacked --strip-components=1
             TARGET=unpacked
@@ -119,13 +147,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+
       - name: Prepare scan target
         id: prep
         env:
           PACKAGE: ${{ inputs.package }}
         run: |
           if [ -n "$PACKAGE" ]; then
-            npm pack "$PACKAGE"
+            npm pack "$PACKAGE_SPEC"
             mkdir -p unpacked
             tar -xzf ./*.tgz -C unpacked --strip-components=1
             (cd unpacked && npm install --package-lock-only --ignore-scripts)

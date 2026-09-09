@@ -4,9 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'npm package to scan with GuardDog (e.g. express or express@4.18.2). Leave empty to verify the local package.json.'
+        description: 'npm package name to scan (e.g. express or @scope/pkg). Leave empty to verify the local package.json.'
         required: false
         type: string
+      version:
+        description: 'Optional package version to scan (e.g. 4.18.2).'
+        required: false
+        default: 'latest'
+        type: string
+      sandbox:
+        description: 'Run GuardDog inside its kernel-level sandbox. Set to false for local act runs where the sandbox is unavailable.'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -22,3 +32,5 @@ jobs:
     uses: './.github/workflows/test-security.yml'
     with:
       package: ${{ inputs.package }}
+      version: ${{ inputs.version }}
+      sandbox: ${{ inputs.sandbox }}

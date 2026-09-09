@@ -9,6 +9,7 @@
   "scripts": {
     "act": "act push",
     "act:list": "act -l",
+    "act:security": "act workflow_call -W .github/workflows/test-security.yml --input package=n8n-nodes-evolution-api --input version=1.0.4 --input sandbox=false",
     "act:self-test": "act workflow_dispatch -W .github/workflows/self-test.yml",
     "format": "prettier --write .",
     "test": "node --test"

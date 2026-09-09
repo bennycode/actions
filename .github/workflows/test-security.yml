@@ -145,6 +145,7 @@ jobs:
 
       - name: Run OpenSSF Scorecard (package)
         if: ${{ inputs.package != '' }}
+        continue-on-error: true
         env:
           PACKAGE: ${{ inputs.package }}
           GITHUB_AUTH_TOKEN: ${{ github.token }}

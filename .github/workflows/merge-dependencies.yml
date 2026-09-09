@@ -12,15 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
+      # GITHUB_TOKEN cannot merge a pull request that touches ".github/workflows"
+      # because that needs a "workflows" permission which the token cannot be
+      # granted. Those updates change how CI itself runs, so they are left for
+      # review instead of being merged with a personal access token.
+      #
       # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/automatically-merging-a-pull-request#about-auto-merge
-      - name: 'Enable auto-merge on PR'
-        run: gh pr merge --auto --squash "$PR_URL"
+      - name: 'Approve and auto-merge PR'
+        run: |
+          if gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -q '^\.github/workflows/'; then
+            echo "::notice::Skipped auto-merge because this pull request changes workflow files. Please review and merge it manually."
+            exit 0
+          fi
+          gh pr merge --auto --squash "$PR_URL"
+          gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#about-the-github_token-secret
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: 'Approve PR'
-        run: gh pr review --approve "$PR_URL"
-        env:
-          PR_URL: ${{github.event.pull_request.html_url}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

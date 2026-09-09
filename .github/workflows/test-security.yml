@@ -103,3 +103,44 @@ jobs:
         with:
           category: scorecard
           sarif_file: security.scorecard.sarif
+
+  vulnerability-security:
+    permissions:
+      contents: read
+      security-events: write
+    name: Vulnerability security checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Prepare scan target
+        id: prep
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            npm pack "$PACKAGE"
+            mkdir -p unpacked
+            tar -xzf ./*.tgz -C unpacked --strip-components=1
+            (cd unpacked && npm install --package-lock-only --ignore-scripts)
+            echo "path=unpacked" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=./" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run OSV-Scanner
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
+        with:
+          scan-args: |-
+            --format=sarif
+            --output=security.osv.sarif
+            --recursive
+            ${{ steps.prep.outputs.path }}
+
+      - name: Upload OSV-Scanner SARIF file to GitHub
+        uses: github/codeql-action/upload-sarif@v4.38.0
+        with:
+          category: osv-scanner
+          sarif_file: security.osv.sarif

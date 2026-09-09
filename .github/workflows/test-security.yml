@@ -31,7 +31,7 @@ jobs:
           if [ -n "$PACKAGE" ]; then
             uvx guarddog npm scan "$PACKAGE" --output-format sarif > security.guarddog.sarif
           else
-            uvx guarddog npm verify package.json --output-format sarif --exclude-rules repository_integrity_mismatch > security.guarddog.sarif
+            uvx guarddog npm verify package.json --output-format sarif > security.guarddog.sarif
           fi
 
       - name: Upload SARIF file to GitHub
@@ -95,7 +95,7 @@ jobs:
             TARGET=(--repo="github.com/$GITHUB_REPOSITORY")
           fi
           docker run --rm -e GITHUB_AUTH_TOKEN \
-            gcr.io/openssf/scorecard:stable \
+            ghcr.io/ossf/scorecard:v5.5.0 \
             "${TARGET[@]}" --format=sarif > security.scorecard.sarif
 
       - name: Upload Scorecard SARIF file to GitHub

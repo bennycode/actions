@@ -165,20 +165,23 @@ jobs:
           PACKAGE: ${{ inputs.package }}
           GITHUB_AUTH_TOKEN: ${{ github.token }}
         run: |
+          # The scorecard binary can't emit SARIF, so keep its native report.
           docker run --rm -e GITHUB_AUTH_TOKEN \
             ghcr.io/ossf/scorecard:v5.5.0 \
-            --npm="$PACKAGE" --format=sarif > security.scorecard.sarif
+            --npm="$PACKAGE" --format=default | tee security.scorecard.txt
 
       - name: Write Scorecard summary
         if: always()
         run: |
-          if [ -f security.scorecard.sarif ]; then
-            {
-              echo '```'
+          {
+            echo '```'
+            if [ -f security.scorecard.sarif ]; then
               uvx --from sarif-tools sarif summary security.scorecard.sarif
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+            elif [ -f security.scorecard.txt ]; then
+              cat security.scorecard.txt
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   vulnerability-security:
     permissions:

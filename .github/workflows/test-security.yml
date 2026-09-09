@@ -176,6 +176,23 @@ jobs:
             --recursive
             ${{ steps.prep.outputs.path }}
 
+      - name: Report OSV-Scanner findings
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
+        with:
+          scan-args: |-
+            --format=markdown
+            --output=security.osv.md
+            --recursive
+            ${{ steps.prep.outputs.path }}
+
+      - name: Write OSV-Scanner summary
+        if: always()
+        run: |
+          if [ -f security.osv.md ]; then
+            cat security.osv.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload OSV-Scanner SARIF file to GitHub
         uses: github/codeql-action/upload-sarif@v4.38.0
         with:

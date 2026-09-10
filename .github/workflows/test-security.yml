@@ -31,48 +31,11 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: GuardDog checks
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7.0.1
-
-      - uses: ./.github/actions/setup
-
-      - name: Run GuardDog
-        env:
-          PACKAGE: ${{ inputs.package }}
-          VERSION: ${{ inputs.version }}
-          SANDBOX: ${{ inputs.sandbox }}
-        run: |
-          SANDBOX_FLAG=""
-          if [ "$SANDBOX" = "false" ]; then
-            SANDBOX_FLAG="--no-sandbox"
-          fi
-          if [ -n "$PACKAGE" ]; then
-            # GuardDog scan can't emit SARIF, so keep its native report.
-            if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
-              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE" --version "$VERSION" | tee security.guarddog.txt
-            else
-              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE" | tee security.guarddog.txt
-            fi
-          else
-            uvx guarddog npm verify $SANDBOX_FLAG --output-format sarif package.json > security.guarddog.sarif
-          fi
-
-      - name: Upload SARIF file to GitHub
-        if: ${{ inputs.package == '' }}
-        uses: github/codeql-action/upload-sarif@v4.38.0
-        with:
-          category: guarddog-builtin
-          sarif_file: security.guarddog.sarif
-
-      - name: Write GuardDog summary
-        if: always()
-        uses: ./.github/actions/security-summary
-        with:
-          sarif: security.guarddog.sarif
-          text: security.guarddog.txt
+    uses: ./.github/workflows/test-security-guarddog.yml
+    with:
+      package: ${{ inputs.package }}
+      version: ${{ inputs.version }}
+      sandbox: ${{ inputs.sandbox }}
 
   code-security:
     permissions:

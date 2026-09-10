@@ -1,0 +1,79 @@
+name: 'Test Security (OSV-Scanner)'
+
+on:
+  workflow_call:
+    inputs: &inputs
+      package:
+        description: 'npm package name to scan (e.g. express or @scope/pkg). Leave empty to verify the local package.json.'
+        required: false
+        type: string
+      version:
+        description: 'Optional package version to scan (e.g. 4.18.2).'
+        required: false
+        default: 'latest'
+        type: string
+      sandbox:
+        description: 'Run GuardDog inside its kernel-level sandbox. Set to false for local act runs where the sandbox is unavailable.'
+        required: false
+        default: true
+        type: boolean
+  workflow_dispatch:
+    inputs: *inputs
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_SPEC: ${{ inputs.package }}@${{ inputs.version }}
+
+jobs:
+  osv-scanner:
+    permissions:
+      contents: read
+      security-events: write
+    name: OSV-Scanner checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: ./.github/actions/setup
+        with:
+          node: 'true'
+
+      - name: Prepare scan target
+        id: prep
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            npm pack "$PACKAGE_SPEC"
+            mkdir -p unpacked
+            tar -xzf ./*.tgz -C unpacked --strip-components=1
+            (cd unpacked && npm install --package-lock-only --ignore-scripts)
+            echo "path=unpacked" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=./" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run OSV-Scanner
+        continue-on-error: true
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
+        with:
+          scan-args: |-
+            --format=sarif
+            --output=security.osv.sarif
+            --recursive
+            ${{ steps.prep.outputs.path }}
+
+      - name: Write OSV-Scanner summary
+        if: always()
+        uses: ./.github/actions/security-summary
+        with:
+          sarif: security.osv.sarif
+
+      - name: Upload OSV-Scanner SARIF file to GitHub
+        uses: github/codeql-action/upload-sarif@v4.38.0
+        with:
+          category: osv-scanner
+          sarif_file: security.osv.sarif

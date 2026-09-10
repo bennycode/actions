@@ -29,7 +29,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: Dependency security checks
+    name: GuardDog checks
     runs-on: ubuntu-latest
 
     steps:
@@ -82,7 +82,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: Code security checks
+    name: Semgrep checks
     runs-on: ubuntu-latest
 
     steps:
@@ -133,7 +133,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: Repository security checks
+    name: OpenSSF Scorecard
     runs-on: ubuntu-latest
 
     steps:
@@ -187,7 +187,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: Vulnerability security checks
+    name: OSV-Scanner checks
     runs-on: ubuntu-latest
 
     steps:

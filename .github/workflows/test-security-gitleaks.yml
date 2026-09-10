@@ -1,0 +1,78 @@
+name: 'Test Security (Gitleaks)'
+
+on:
+  workflow_call:
+    inputs: &inputs
+      package:
+        description: 'npm package name to scan (e.g. express or @scope/pkg). Leave empty to verify the local package.json.'
+        required: false
+        type: string
+      version:
+        description: 'Optional package version to scan (e.g. 4.18.2).'
+        required: false
+        default: 'latest'
+        type: string
+      sandbox:
+        description: 'Run GuardDog inside its kernel-level sandbox. Set to false for local act runs where the sandbox is unavailable.'
+        required: false
+        default: true
+        type: boolean
+  workflow_dispatch:
+    inputs: *inputs
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_SPEC: ${{ inputs.package }}@${{ inputs.version }}
+  GITLEAKS_VERSION: 8.30.1
+
+jobs:
+  gitleaks:
+    permissions:
+      contents: read
+      security-events: write
+    name: Gitleaks checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: ./.github/actions/setup
+        with:
+          node: 'true'
+
+      - name: Install Gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          rm -f gitleaks gitleaks.tar.gz
+
+      - name: Run Gitleaks
+        continue-on-error: true
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            DIR="$RUNNER_TEMP/gitleaks-target"
+            rm -rf "$DIR" && mkdir -p "$DIR"
+            npm pack "$PACKAGE_SPEC"
+            tar -xzf ./*.tgz -C "$DIR" --strip-components=1
+            TARGET="$DIR"
+          else
+            TARGET="."
+          fi
+          gitleaks dir "$TARGET" --report-format sarif --report-path security.gitleaks.sarif
+
+      - name: Write Gitleaks summary
+        if: always()
+        uses: ./.github/actions/security-summary
+        with:
+          sarif: security.gitleaks.sarif
+
+      - name: Upload Gitleaks SARIF file to GitHub
+        uses: github/codeql-action/upload-sarif@v4.38.0
+        with:
+          category: gitleaks
+          sarif_file: security.gitleaks.sarif

@@ -48,7 +48,7 @@ jobs:
             echo "| $TARGET | $SCANNED_VERSION |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  dependency-security:
+  scan-for-malware:
     permissions:
       contents: read
       security-events: write
@@ -58,7 +58,7 @@ jobs:
       version: ${{ inputs.version }}
       sandbox: ${{ inputs.sandbox }}
 
-  code-security:
+  scan-for-insecure-code:
     permissions:
       contents: read
       security-events: write
@@ -68,7 +68,7 @@ jobs:
       version: ${{ inputs.version }}
       sandbox: ${{ inputs.sandbox }}
 
-  repository-security:
+  scan-for-misconfiguration:
     permissions:
       contents: read
       security-events: write
@@ -78,11 +78,21 @@ jobs:
       version: ${{ inputs.version }}
       sandbox: ${{ inputs.sandbox }}
 
-  vulnerability-security:
+  scan-for-vulnerabilities:
     permissions:
       contents: read
       security-events: write
     uses: ./.github/workflows/test-security-osv.yml
+    with:
+      package: ${{ inputs.package }}
+      version: ${{ inputs.version }}
+      sandbox: ${{ inputs.sandbox }}
+
+  scan-for-secrets:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/test-security-gitleaks.yml
     with:
       package: ${{ inputs.package }}
       version: ${{ inputs.version }}

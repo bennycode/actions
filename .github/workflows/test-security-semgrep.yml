@@ -66,7 +66,8 @@ jobs:
           sarif: security.semgrep.sarif
 
       - name: Upload Semgrep SARIF file to GitHub
-        uses: github/codeql-action/upload-sarif@v4.38.0
+        uses: ./.github/actions/upload-security-sarif
         with:
           category: semgrep
-          sarif_file: security.semgrep.sarif
+          sarif: security.semgrep.sarif
+          package: ${{ inputs.package }}

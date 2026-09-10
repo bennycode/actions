@@ -6,6 +6,10 @@ on:
       CODECOV_TOKEN:
         description: 'Coverage Upload Token: https://docs.codecov.com/docs/codecov-uploader#upload-token'
         required: false
+
+permissions:
+  contents: read
+
 jobs:
   test-coverage:
     if: |

@@ -1,0 +1,23 @@
+name: Upload security SARIF
+description: Upload a SARIF report to GitHub code scanning, skipping package scans so their findings don't pollute this repo's alerts.
+
+inputs:
+  category:
+    description: Code scanning category for this tool.
+    required: true
+  sarif:
+    description: Path to the SARIF file to upload.
+    required: true
+  package:
+    description: Scanned package name. When set, the upload is skipped because the findings belong to a third-party package, not this repo.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.package == '' }}
+      uses: github/codeql-action/upload-sarif@v4.38.0
+      with:
+        category: ${{ inputs.category }}
+        sarif_file: ${{ inputs.sarif }}

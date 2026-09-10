@@ -66,8 +66,8 @@ jobs:
           text: security.scorecard.txt
 
       - name: Upload Scorecard SARIF file to GitHub
-        if: ${{ inputs.package == '' }}
-        uses: github/codeql-action/upload-sarif@v4.38.0
+        uses: ./.github/actions/upload-security-sarif
         with:
           category: scorecard
-          sarif_file: security.scorecard.sarif
+          sarif: security.scorecard.sarif
+          package: ${{ inputs.package }}

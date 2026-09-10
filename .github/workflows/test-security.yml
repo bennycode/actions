@@ -24,6 +24,30 @@ permissions:
   contents: read
 
 jobs:
+  summary:
+    name: Test summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write test target summary
+        env:
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$PACKAGE" ]; then
+            TARGET="$PACKAGE"
+            SCANNED_VERSION="${VERSION:-latest}"
+          else
+            TARGET="local package.json"
+            SCANNED_VERSION="n/a"
+          fi
+          {
+            echo "## Security scan target"
+            echo ""
+            echo "| Package | Version |"
+            echo "| --- | --- |"
+            echo "| $TARGET | $SCANNED_VERSION |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   dependency-security:
     permissions:
       contents: read

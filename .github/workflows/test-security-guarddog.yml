@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: GuardDog checks
+    name: GuardDog
     runs-on: ubuntu-latest
 
     steps:

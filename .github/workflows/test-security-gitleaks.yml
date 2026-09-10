@@ -32,7 +32,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: Gitleaks checks
+    name: Gitleaks
     runs-on: ubuntu-latest
 
     steps:

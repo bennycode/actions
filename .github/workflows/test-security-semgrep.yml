@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: Semgrep checks
+    name: Semgrep
     runs-on: ubuntu-latest
 
     steps:

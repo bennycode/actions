@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    name: OSV-Scanner checks
+    name: OSV-Scanner
     runs-on: ubuntu-latest
 
     steps:

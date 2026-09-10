@@ -48,10 +48,11 @@ jobs:
             SANDBOX_FLAG="--no-sandbox"
           fi
           if [ -n "$PACKAGE" ]; then
+            # GuardDog scan can't emit SARIF, so keep its native report.
             if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
-              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE" --version "$VERSION"
+              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE" --version "$VERSION" | tee security.guarddog.txt
             else
-              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE"
+              uvx guarddog npm scan $SANDBOX_FLAG "$PACKAGE" | tee security.guarddog.txt
             fi
           else
             uvx guarddog npm verify $SANDBOX_FLAG --output-format sarif package.json > security.guarddog.sarif
@@ -63,6 +64,19 @@ jobs:
         with:
           category: guarddog-builtin
           sarif_file: security.guarddog.sarif
+
+      - name: Write GuardDog summary
+        if: always()
+        run: |
+          {
+            echo '```'
+            if [ -f security.guarddog.sarif ]; then
+              uvx --from sarif-tools sarif summary security.guarddog.sarif
+            elif [ -f security.guarddog.txt ]; then
+              cat security.guarddog.txt
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   code-security:
     permissions:
@@ -93,19 +107,18 @@ jobs:
             tar -xzf ./*.tgz -C "$DIR" --strip-components=1
             : > "$DIR/.semgrepignore"
             SARIF="$PWD/security.semgrep.sarif"
-            TXT="$PWD/security.semgrep.txt"
-            (cd "$DIR" && uvx semgrep scan --config auto --sarif-output "$SARIF" --text-output "$TXT" .)
+            (cd "$DIR" && uvx semgrep scan --config auto --sarif-output "$SARIF" .)
           else
-            uvx semgrep scan --config auto --sarif-output security.semgrep.sarif --text-output security.semgrep.txt .
+            uvx semgrep scan --config auto --sarif-output security.semgrep.sarif .
           fi
 
       - name: Write Semgrep summary
         if: always()
         run: |
-          if [ -f security.semgrep.txt ]; then
+          if [ -f security.semgrep.sarif ]; then
             {
               echo '```'
-              cat security.semgrep.txt
+              uvx --from sarif-tools sarif summary security.semgrep.sarif
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -127,6 +140,8 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v10.0.1
 
       - name: Run OpenSSF Scorecard (repository)
         if: ${{ inputs.package == '' }}
@@ -150,9 +165,23 @@ jobs:
           PACKAGE: ${{ inputs.package }}
           GITHUB_AUTH_TOKEN: ${{ github.token }}
         run: |
+          # The scorecard binary can't emit SARIF, so keep its native report.
           docker run --rm -e GITHUB_AUTH_TOKEN \
             ghcr.io/ossf/scorecard:v5.5.0 \
-            --npm="$PACKAGE" --format=json
+            --npm="$PACKAGE" --format=default | tee security.scorecard.txt
+
+      - name: Write Scorecard summary
+        if: always()
+        run: |
+          {
+            echo '```'
+            if [ -f security.scorecard.sarif ]; then
+              uvx --from sarif-tools sarif summary security.scorecard.sarif
+            elif [ -f security.scorecard.txt ]; then
+              cat security.scorecard.txt
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   vulnerability-security:
     permissions:
@@ -167,6 +196,8 @@ jobs:
       - uses: actions/setup-node@v7.0.0
         with:
           node-version-file: '.nvmrc'
+
+      - uses: astral-sh/setup-uv@v10.0.1
 
       - name: Prepare scan target
         id: prep
@@ -193,21 +224,15 @@ jobs:
             --recursive
             ${{ steps.prep.outputs.path }}
 
-      - name: Report OSV-Scanner findings
-        continue-on-error: true
-        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
-        with:
-          scan-args: |-
-            --format=markdown
-            --output=security.osv.md
-            --recursive
-            ${{ steps.prep.outputs.path }}
-
       - name: Write OSV-Scanner summary
         if: always()
         run: |
-          if [ -f security.osv.md ]; then
-            cat security.osv.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f security.osv.sarif ]; then
+            {
+              echo '```'
+              uvx --from sarif-tools sarif summary security.osv.sarif
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload OSV-Scanner SARIF file to GitHub

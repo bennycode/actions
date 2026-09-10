@@ -17,6 +17,22 @@ on:
         required: false
         default: true
         type: boolean
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'npm package name to scan (e.g. express or @scope/pkg). Leave empty to verify the local package.json.'
+        required: false
+        type: string
+      version:
+        description: 'Optional package version to scan (e.g. 4.18.2).'
+        required: false
+        default: 'latest'
+        type: string
+      sandbox:
+        description: 'Run GuardDog inside its kernel-level sandbox. Set to false for local act runs where the sandbox is unavailable.'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -35,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: ./.github/actions/setup
 
       - name: Run GuardDog
         env:
@@ -67,17 +83,10 @@ jobs:
 
       - name: Write GuardDog summary
         if: always()
-        run: |
-          {
-            echo '```'
-            if [ -f security.guarddog.sarif ]; then
-              uvx --from sarif-tools sarif summary security.guarddog.sarif
-            elif [ -f security.guarddog.txt ]; then
-              cat security.guarddog.txt
-            fi
-            echo
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/security-summary
+        with:
+          sarif: security.guarddog.sarif
+          text: security.guarddog.txt
 
   code-security:
     permissions:
@@ -89,11 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v7.0.0
+      - uses: ./.github/actions/setup
         with:
-          node-version-file: '.nvmrc'
-
-      - uses: astral-sh/setup-uv@v10.0.1
+          node: 'true'
 
       - name: Run Semgrep
         env:
@@ -115,15 +122,9 @@ jobs:
 
       - name: Write Semgrep summary
         if: always()
-        run: |
-          if [ -f security.semgrep.sarif ]; then
-            {
-              echo '```'
-              uvx --from sarif-tools sarif summary security.semgrep.sarif
-              echo
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+        uses: ./.github/actions/security-summary
+        with:
+          sarif: security.semgrep.sarif
 
       - name: Upload Semgrep SARIF file to GitHub
         uses: github/codeql-action/upload-sarif@v4.38.0
@@ -143,7 +144,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: ./.github/actions/setup
 
       - name: Run OpenSSF Scorecard (repository)
         if: ${{ inputs.package == '' }}
@@ -174,18 +175,10 @@ jobs:
 
       - name: Write Scorecard summary
         if: always()
-        run: |
-          {
-            echo '```'
-            if [ -f security.scorecard.sarif ]; then
-              uvx --from sarif-tools sarif summary security.scorecard.sarif
-            elif [ -f security.scorecard.txt ]; then
-              cat security.scorecard.txt
-            fi
-            # Newline so output without a trailing one doesn't glue to the fence.
-            echo
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/security-summary
+        with:
+          sarif: security.scorecard.sarif
+          text: security.scorecard.txt
 
   vulnerability-security:
     permissions:
@@ -197,11 +190,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v7.0.0
+      - uses: ./.github/actions/setup
         with:
-          node-version-file: '.nvmrc'
-
-      - uses: astral-sh/setup-uv@v10.0.1
+          node: 'true'
 
       - name: Prepare scan target
         id: prep
@@ -230,15 +221,9 @@ jobs:
 
       - name: Write OSV-Scanner summary
         if: always()
-        run: |
-          if [ -f security.osv.sarif ]; then
-            {
-              echo '```'
-              uvx --from sarif-tools sarif summary security.osv.sarif
-              echo
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+        uses: ./.github/actions/security-summary
+        with:
+          sarif: security.osv.sarif
 
       - name: Upload OSV-Scanner SARIF file to GitHub
         uses: github/codeql-action/upload-sarif@v4.38.0

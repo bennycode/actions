@@ -1,0 +1,39 @@
+name: Security summary
+description: Render a SARIF or plain-text scan report into the job step summary.
+
+inputs:
+  sarif:
+    description: Path to a SARIF file to summarize (preferred).
+    required: false
+    default: ''
+  text:
+    description: Path to a plain-text report used when no SARIF is available.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SARIF: ${{ inputs.sarif }}
+        TEXT: ${{ inputs.text }}
+      run: |
+        if [ -n "$SARIF" ] && [ -f "$SARIF" ]; then
+          SRC=sarif
+        elif [ -n "$TEXT" ] && [ -f "$TEXT" ]; then
+          SRC=text
+        else
+          exit 0
+        fi
+        {
+          echo '```'
+          if [ "$SRC" = sarif ]; then
+            uvx --from sarif-tools sarif summary "$SARIF"
+          else
+            cat "$TEXT"
+          fi
+          # Newline so output without a trailing one doesn't glue to the fence.
+          echo
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

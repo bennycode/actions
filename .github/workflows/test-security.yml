@@ -75,7 +75,6 @@ jobs:
             elif [ -f security.guarddog.txt ]; then
               cat security.guarddog.txt
             fi
-            # Newline so output without a trailing one doesn't glue to the fence.
             echo
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

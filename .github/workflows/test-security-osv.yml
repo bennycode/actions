@@ -64,6 +64,7 @@ jobs:
             --format=sarif
             --output=security.osv.sarif
             --recursive
+            --allow-no-lockfiles
             ${{ steps.prep.outputs.path }}
 
       - name: Write OSV-Scanner summary

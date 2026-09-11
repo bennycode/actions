@@ -40,6 +40,9 @@ jobs:
             TARGET="local package.json"
             SCANNED_VERSION="n/a"
           fi
+          # Strip characters that could break out of the markdown table cell.
+          TARGET=$(printf '%s' "$TARGET" | tr -d '\n\r`' | sed 's/|/\\|/g')
+          SCANNED_VERSION=$(printf '%s' "$SCANNED_VERSION" | tr -d '\n\r`' | sed 's/|/\\|/g')
           {
             echo "## Security scan target"
             echo ""

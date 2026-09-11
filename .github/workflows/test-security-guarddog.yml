@@ -42,6 +42,8 @@ jobs:
           VERSION: ${{ inputs.version }}
           SANDBOX: ${{ inputs.sandbox }}
         run: |
+          # pipefail so a GuardDog failure isn't masked by tee's exit code.
+          set -o pipefail
           SANDBOX_FLAG=""
           if [ "$SANDBOX" = "false" ]; then
             SANDBOX_FLAG="--no-sandbox"

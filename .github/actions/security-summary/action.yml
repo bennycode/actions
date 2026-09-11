@@ -26,25 +26,31 @@ runs:
         else
           exit 0
         fi
+        REPORT="$(mktemp)"
+        if [ "$SRC" = sarif ]; then
+          uvx --from sarif-tools sarif summary "$SARIF" > "$REPORT"
+          # summary abbreviates each rule, so append the full per-finding CSV.
+          CSV="$(mktemp -u).csv"
+          uvx --from sarif-tools sarif csv -o "$CSV" "$SARIF" >/dev/null
+          echo >> "$REPORT"
+          # CSV always has a header row; more lines mean actual findings.
+          if [ "$(wc -l < "$CSV")" -gt 1 ]; then
+            cat "$CSV" >> "$REPORT"
+          else
+            echo 'No findings.' >> "$REPORT"
+          fi
+          rm -f "$CSV"
+        else
+          cat "$TEXT" > "$REPORT"
+        fi
+        # Escape leading backticks so untrusted scan output can't close the
+        # code fence and inject markdown into the step summary.
+        sed -i 's/^`/\\`/' "$REPORT"
         {
           echo '```'
-          if [ "$SRC" = sarif ]; then
-            uvx --from sarif-tools sarif summary "$SARIF"
-            # summary abbreviates each rule, so append the full per-finding CSV.
-            CSV="$(mktemp -u).csv"
-            uvx --from sarif-tools sarif csv -o "$CSV" "$SARIF" >/dev/null
-            echo
-            # CSV always has a header row; more lines mean actual findings.
-            if [ "$(wc -l < "$CSV")" -gt 1 ]; then
-              cat "$CSV"
-            else
-              echo 'No findings.'
-            fi
-            rm -f "$CSV"
-          else
-            cat "$TEXT"
-          fi
+          cat "$REPORT"
           # Newline so output without a trailing one doesn't glue to the fence.
           echo
           echo '```'
         } >> "$GITHUB_STEP_SUMMARY"
+        rm -f "$REPORT"

@@ -75,7 +75,6 @@ jobs:
     uses: ./.github/workflows/test-security-scorecard.yml
     with:
       package: ${{ inputs.package }}
-      version: ${{ inputs.version }}
       sandbox: ${{ inputs.sandbox }}
 
   scan-for-vulnerabilities:

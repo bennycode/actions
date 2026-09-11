@@ -7,11 +7,6 @@ on:
         description: 'npm package name to scan (e.g. express or @scope/pkg). Leave empty to verify the local package.json.'
         required: false
         type: string
-      version:
-        description: 'Optional package version to scan (e.g. 4.18.2).'
-        required: false
-        default: 'latest'
-        type: string
       sandbox:
         description: 'Run GuardDog inside its kernel-level sandbox. Set to false for local act runs where the sandbox is unavailable.'
         required: false
@@ -48,12 +43,15 @@ jobs:
 
       - name: Run OpenSSF Scorecard (package)
         if: ${{ inputs.package != '' }}
-        continue-on-error: true
         env:
           PACKAGE: ${{ inputs.package }}
           GITHUB_AUTH_TOKEN: ${{ github.token }}
         run: |
+          # pipefail so a scorecard failure isn't masked by tee's exit code.
+          set -o pipefail
           # The scorecard binary can't emit SARIF, so keep its native report.
+          # Scorecard scores the package's source repository (default branch),
+          # not a specific release, so there is no version to select.
           docker run --rm -e GITHUB_AUTH_TOKEN \
             ghcr.io/ossf/scorecard:v5.5.0 \
             --npm="$PACKAGE" --format=default | tee security.scorecard.txt

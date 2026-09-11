@@ -16,7 +16,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - if: ${{ inputs.package == '' }}
+    # Skip package scans (their findings aren't ours) and missing files, but
+    # still upload local-repo results even when an earlier step failed.
+    - if: ${{ always() && inputs.package == '' && hashFiles(inputs.sarif) != '' }}
       uses: github/codeql-action/upload-sarif@v4.38.0
       with:
         category: ${{ inputs.category }}

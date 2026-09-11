@@ -7,3 +7,10 @@ updates:
       interval: 'monthly'
       time: '02:00'
       timezone: 'Europe/Berlin'
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      day: 'wednesday'
+      interval: 'monthly'
+      time: '02:00'
+      timezone: 'Europe/Berlin'
